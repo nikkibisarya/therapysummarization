@@ -16,18 +16,18 @@ class_clusters = {'6' : ['depression emotion', 'anger', 'mania', 'sadness', 'con
 
 def corpus_dic(csvfile):
     csvfile = open(csvfile, 'rt')
-    print('opened the file')
     csvreader = csv.reader(csvfile, delimiter=',')
     corpus = {}
     i = 0
+    tempVar = ''
     for row in csvreader:
         if i != 0:
             fileID = int(row[1])
             if fileID not in corpus.keys():
+                fileID = str(fileID)
                 corpus[fileID] = []
-            corpus[fileID].append(row[-2]+"::"+row[-1]) 
+            corpus[fileID].append(row[-2]+"::"+row[-1])
         i = i + 1
-    print('corpus: ')
     return corpus
 
 def ctrn_metadata():
@@ -38,21 +38,24 @@ def ctrn_metadata():
     corpus = corpus_dic('C:/Users/Boltak/Desktop/genpsych/General_psychtx_corpus_phase1.1.csv')
     for row in csvreader:
         if i != 0:
-            getID = row[4].split('>')
-            if getID[1] != 'NA':
-                fileID = getID[1]
-            data[fileID] = {}
-            data[fileID]['valid transcript'] = True
-            summary = row[5].split(":")[1]
-            if row[21] != 'NA':
-                symptoms = row[21].split(';')
-            else:
-                data[fileID]['valid transcript'] = False
-            data[fileID]['summary'] = summary
-            symptoms = [x.lower() for x in symptoms]
-            data[fileID]['symptoms'] = symptoms
-            data[fileID]['cluster_symp'] = [0] * 8
-            data[fileID]['transcript'] = corpus[fileID]
+            if row[4] != '':
+                getID = row[4].split('>')
+                if getID[0] != 'NA':
+                    if len(getID) == 1:
+                        fileID = str(getID[0])
+                    else:
+                        fileID = str(getID[1])
+                    if fileID in corpus:
+                        data[fileID] = {}
+                        data[fileID]['valid transcript'] = True
+                        if row[21] != 'NA':
+                            symptoms = row[21].split(';')
+                        else:
+                            data[fileID]['valid transcript'] = False
+                        symptoms = [x.lower() for x in symptoms]
+                        data[fileID]['symptoms'] = symptoms
+                        data[fileID]['cluster_symp'] = [0] * 8
+                        data[fileID]['transcript'] = corpus[fileID]
         i = i+1
     return data
 
@@ -62,14 +65,15 @@ def symptom2cluster(symptom, class_clusters=class_clusters):
     symptom = re.sub(r'[^\w\s]','',symptom)
     for key in class_clusters.keys():
         if symptom in class_clusters[key]:
-            cluster = key
+            cluster = int(key)
     return cluster
 
 def clusterVectCreation(data):
     clusterIndex = -1
     for fileID in data.keys():
         for symptom in data[fileID]['symptoms']:
-            clusterIndex = symptom2cluster(symptom)
+            clusterIndex = int(symptom2cluster(symptom))
+            print('cluster index: ', type(clusterIndex) is int)
             data[fileID]['cluster_symp'][clusterIndex] = data[fileID]['cluster_symp'][clusterIndex] + 1
     
 def onevsrest(ctrn_meta):
