@@ -19,10 +19,9 @@ def corpus_dic(csvfile):
     csvreader = csv.reader(csvfile, delimiter=',')
     corpus = {}
     i = 0
-    tempVar = ''
     for row in csvreader:
         if i != 0:
-            fileID = int(row[1])
+            fileID = str(row[1])
             if fileID not in corpus.keys():
                 fileID = str(fileID)
                 corpus[fileID] = []
@@ -52,7 +51,6 @@ def ctrn_metadata():
                             symptoms = row[21].split(';')
                         else:
                             data[fileID]['valid transcript'] = False
-                        symptoms = [x.lower() for x in symptoms]
                         data[fileID]['symptoms'] = symptoms
                         data[fileID]['cluster_symp'] = [0] * 8
                         data[fileID]['transcript'] = corpus[fileID]
@@ -66,40 +64,48 @@ def symptom2cluster(symptom, class_clusters=class_clusters):
     for key in class_clusters.keys():
         if symptom in class_clusters[key]:
             cluster = int(key)
+            break
     return cluster
 
 def clusterVectCreation(data):
+    new = open("res.txt","a+")
     clusterIndex = -1
     for fileID in data.keys():
         for symptom in data[fileID]['symptoms']:
-            clusterIndex = int(symptom2cluster(symptom))
-            print('cluster index: ', type(clusterIndex) is int)
-            data[fileID]['cluster_symp'][clusterIndex] = data[fileID]['cluster_symp'][clusterIndex] + 1
+            clusterIndex = symptom2cluster(symptom)
+            if clusterIndex == '':
+                data[fileID]['valid transcript'] = False
+            else:
+                data[fileID]['cluster_symp'][clusterIndex] += 1
+    new.write('test: ' + str(data['1000094385']['transcript']))      
+    new.close()  
     
 def onevsrest(ctrn_meta):
     count_vect = TfidfVectorizer()
     dataX = []
     dataY = []
     for fileID in ctrn_meta.keys():
-        dataX.append(ctrn_meta[fileID]['transcript'])
-        dataY.append(ctrn_meta[fileID]['cluster_symp'])
-    print('data x: ', dataX)
+        if ctrn_meta[fileID]['valid transcript'] == True:
+            dataX.append(ctrn_meta[fileID]['transcript'])
+            dataY.append(ctrn_meta[fileID]['cluster_symp'])
+            break
     count_vect.fit(dataX)
+    print('datax: ', dataX)
     count_vect_X = count_vect.transform(dataX)
     count_vect_Y = dataY
     
     X_train, X_test, y_train, y_test = train_test_split(count_vect_X, count_vect_Y, test_size=0.33, random_state=42)
 
-    pred_y = []
     pred_y = OneVsRestClassifier(LinearSVC(random_state=0)).fit(X_train, y_train).predict(X_test)
-    print('Recall Score: ', recall_score(y_test, pred_y))
+    f.write('Recall Score: ', recall_score(y_test, pred_y))
     
 def main():
+    f = open("results.txt","a+")
     ctrn_meta = {}
     ctrn_meta = ctrn_metadata()
-    print('dict: ', ctrn_meta)
     clusterVectCreation(ctrn_meta)
     onevsrest(ctrn_meta)
+    f.close()
 
 main()
     
