@@ -25,7 +25,7 @@ def corpus_dic(csvfile):
             if fileID not in corpus.keys():
                 fileID = str(fileID)
                 corpus[fileID] = ''
-            corpus[fileID] = corpus[fileID] + row[-1] #changed append to extend
+            corpus[fileID] = corpus[fileID] + row[-1]
         i = i + 1
     return corpus
 
@@ -54,8 +54,6 @@ def ctrn_metadata():
                         data[fileID]['symptoms'] = symptoms
                         data[fileID]['cluster_symp'] = [0] * 8
                         data[fileID]['transcript'] = corpus[fileID]
-                        type = isinstance(data[fileID]['transcript'], str)
-                        print('type transcript: ', type)
         i = i+1
     return data
 
@@ -88,7 +86,7 @@ def onevsrest(ctrn_meta):
     dataY = []
     for fileID in ctrn_meta.keys():
         if ctrn_meta[fileID]['valid transcript'] == True:
-            dataX.append('.'.join(ctrn_meta[fileID]['transcript']))
+            dataX.append(ctrn_meta[fileID]['transcript'])
             dataY.append(ctrn_meta[fileID]['cluster_symp'])
     count_vect.fit(dataX)
     count_vect_X = count_vect.transform(dataX)
@@ -96,7 +94,9 @@ def onevsrest(ctrn_meta):
     
     X_train, X_test, y_train, y_test = train_test_split(count_vect_X, count_vect_Y, test_size=0.33, random_state=42)
 
-    pred_y = OneVsRestClassifier(LinearSVC(random_state=0)).fit(X_train, y_train).predict(X_test)
+    ovr = OneVsRestClassifier(LinearSVC(random_state=0))
+    ovr.fit(X_train, y_train)
+    pred_y = ovr.predict(X_test)
     recall = recall_score(y_test, pred_y)
     return recall
 
