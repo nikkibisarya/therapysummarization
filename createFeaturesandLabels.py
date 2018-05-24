@@ -4,6 +4,7 @@ from sklearn.svm import LinearSVC
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 import re
+import numpy as np
 from sklearn.metrics import recall_score
 textFileName = 'C:/Users/Boltak/Desktop/genpsych/meta.data.4.03.13.csv'
 
@@ -93,7 +94,8 @@ def onevsrest(ctrn_meta):
     count_vect_Y = dataY
     
     X_train, X_test, y_train, y_test = train_test_split(count_vect_X, count_vect_Y, test_size=0.33, random_state=42)
-
+    X_train = np.array(X_train)
+    print('x train shape: ', X_train.shape())
     ovr = OneVsRestClassifier(LinearSVC(random_state=0))
     ovr.fit(X_train, y_train)
     pred_y = ovr.predict(X_test)
