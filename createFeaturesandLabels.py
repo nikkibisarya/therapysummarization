@@ -3,6 +3,7 @@ from sklearn.multiclass import OneVsRestClassifier
 from sklearn.svm import LinearSVC
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
 import re
 import numpy as np
 from sklearn.metrics import recall_score
@@ -82,6 +83,7 @@ def clusterVectCreation(data):
     new.close()
     
 def onevsrest(ctrn_meta):
+    temp = open("results.txt","a+")
     count_vect = TfidfVectorizer()
     dataX = []
     dataY = []
@@ -92,14 +94,15 @@ def onevsrest(ctrn_meta):
     count_vect.fit(dataX)
     count_vect_X = count_vect.transform(dataX)
     count_vect_Y = dataY
-    
+    #if I was using label encoder
+    #le = LabelEncoder()
+    #count_vect_Y = le.fit_transform(dataY)
     X_train, X_test, y_train, y_test = train_test_split(count_vect_X, count_vect_Y, test_size=0.33, random_state=42)
-    X_train = np.array(X_train)
-    print('x train shape: ', X_train.shape())
     ovr = OneVsRestClassifier(LinearSVC(random_state=0))
     ovr.fit(X_train, y_train)
     pred_y = ovr.predict(X_test)
-    recall = recall_score(y_test, pred_y)
+    recall = recall_score(y_test, pred_y, average = None)
+    temp.close()
     return recall
 
 def main():
@@ -107,7 +110,7 @@ def main():
     ctrn_meta = ctrn_metadata()
     clusterVectCreation(ctrn_meta)
     recall = onevsrest(ctrn_meta)
-    f.write('Recall: ', recall)
+    f.write('Recall: ' + str(recall))
     f.close()
 
 main()
