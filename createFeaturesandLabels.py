@@ -3,10 +3,9 @@ from sklearn.multiclass import OneVsRestClassifier
 from sklearn.svm import LinearSVC
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
 import re
-import numpy as np
 from sklearn.metrics import recall_score
+from _ast import Num
 textFileName = 'C:/Users/Boltak/Desktop/genpsych/meta.data.4.03.13.csv'
 
 class_clusters = {'6' : ['depression emotion', 'anger', 'mania', 'sadness', 'confusion', 'paranoia', 'panic', 'apathy', 'restlessness', 'despair', 'guilt', 'resentment', 'indecisiveness'], 
@@ -56,6 +55,7 @@ def ctrn_metadata():
                         data[fileID]['symptoms'] = symptoms
                         data[fileID]['cluster_symp'] = [0] * 8
                         data[fileID]['transcript'] = corpus[fileID]
+                        data[fileID]['label_num'] = -1
         i = i+1
     return data
 
@@ -70,7 +70,6 @@ def symptom2cluster(symptom, class_clusters=class_clusters):
     return cluster
 
 def clusterVectCreation(data):
-    new = open("res.txt","a+")
     clusterIndex = -1
     for fileID in data.keys():
         for symptom in data[fileID]['symptoms']:
@@ -78,41 +77,53 @@ def clusterVectCreation(data):
             if clusterIndex == '':
                 data[fileID]['valid transcript'] = False
             else:
-                data[fileID]['cluster_symp'][clusterIndex] += 1
-    new.write('test: ' + str(data['1000094385']['transcript']))      
-    new.close()
+                data[fileID]['cluster_symp'][clusterIndex] = 1
+    
+def labelEncoder(data):
+    labels = {}
+    num = 0
+    for fileID in data.keys():
+        if str(data[fileID]['cluster_symp']) in labels.keys():
+            continue
+        else:
+            labels[str(data[fileID]['cluster_symp'])] = num
+            num += 1
+    print('num: ', num)
+    return labels
+
+def replaceLabelVects(labels, data):
+    for fileID in data.keys():
+        data[fileID]['label_num'] = labels[str(data[fileID]['cluster_symp'])]
     
 def onevsrest(ctrn_meta):
-    temp = open("results.txt","a+")
     count_vect = TfidfVectorizer()
     dataX = []
     dataY = []
+    labels = labelEncoder(ctrn_meta)
+    replaceLabelVects(labels, ctrn_meta)
     for fileID in ctrn_meta.keys():
         if ctrn_meta[fileID]['valid transcript'] == True:
             dataX.append(ctrn_meta[fileID]['transcript'])
-            dataY.append(ctrn_meta[fileID]['cluster_symp'])
+            dataY.append(ctrn_meta[fileID]['label_num'])
     count_vect.fit(dataX)
     count_vect_X = count_vect.transform(dataX)
     count_vect_Y = dataY
-    #if I was using label encoder
-    #le = LabelEncoder()
-    #count_vect_Y = le.fit_transform(dataY)
     X_train, X_test, y_train, y_test = train_test_split(count_vect_X, count_vect_Y, test_size=0.33, random_state=42)
     ovr = OneVsRestClassifier(LinearSVC(random_state=0))
     ovr.fit(X_train, y_train)
     pred_y = ovr.predict(X_test)
     recall = recall_score(y_test, pred_y, average = None)
-    temp.close()
     return recall
 
 def main():
-    f = open("results.txt","a+")
+   # f = open('recall.txt','w')
     ctrn_meta = ctrn_metadata()
     clusterVectCreation(ctrn_meta)
     recall = onevsrest(ctrn_meta)
-    f.write('Recall: ' + str(recall))
-    f.close()
-
+   # f.write('Recall: ' + str(recall))
+   # f.close()
+    print('recall: ' + str(recall))
+#loop over different labels
 main()
 
 
