@@ -4,8 +4,11 @@ from sklearn.svm import LinearSVC
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 import re
+from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.metrics import recall_score
-from _ast import Num
+from sklearn.metrics import f1_score
+import numpy as np
+
 textFileName = 'C:/Users/Boltak/Desktop/genpsych/meta.data.4.03.13.csv'
 
 class_clusters = {'6' : ['depression emotion', 'anger', 'mania', 'sadness', 'confusion', 'paranoia', 'panic', 'apathy', 'restlessness', 'despair', 'guilt', 'resentment', 'indecisiveness'], 
@@ -56,6 +59,7 @@ def ctrn_metadata():
                         data[fileID]['cluster_symp'] = [0] * 8
                         data[fileID]['transcript'] = corpus[fileID]
                         data[fileID]['label_num'] = -1
+                        data[fileID]['cluster_presence'] = []
         i = i+1
     return data
 
@@ -69,6 +73,16 @@ def symptom2cluster(symptom, class_clusters=class_clusters):
             break
     return cluster
 
+def clusterPresence(data):
+    for fileID in data.keys():
+        for symp in data[fileID]['symptoms']:
+            num = symptom2cluster(symp)
+            if str(num) != '':
+                if str(num) in data[fileID]['cluster_presence']:
+                    continue
+                else:
+                    data[fileID]['cluster_presence'].append(str(num))
+    
 def clusterVectCreation(data):
     clusterIndex = -1
     for fileID in data.keys():
@@ -99,20 +113,26 @@ def onevsrest(ctrn_meta):
     count_vect = TfidfVectorizer()
     dataX = []
     dataY = []
-    labels = labelEncoder(ctrn_meta)
-    replaceLabelVects(labels, ctrn_meta)
+   # labels = labelEncoder(ctrn_meta)
+  #  replaceLabelVects(labels, ctrn_meta)
+    clusterPresence(ctrn_meta)
     for fileID in ctrn_meta.keys():
         if ctrn_meta[fileID]['valid transcript'] == True:
             dataX.append(ctrn_meta[fileID]['transcript'])
-            dataY.append(ctrn_meta[fileID]['label_num'])
+           # dataY.append(ctrn_meta[fileID]['label_num'])
+            dataY.append(ctrn_meta[fileID]['cluster_presence'])
     count_vect.fit(dataX)
     count_vect_X = count_vect.transform(dataX)
-    count_vect_Y = dataY
+    mlb = MultiLabelBinarizer()
+    count_vect_Y = mlb.fit_transform(dataY)
+   # count_vect_Y = dataY
     X_train, X_test, y_train, y_test = train_test_split(count_vect_X, count_vect_Y, test_size=0.33, random_state=42)
     ovr = OneVsRestClassifier(LinearSVC(random_state=0))
     ovr.fit(X_train, y_train)
     pred_y = ovr.predict(X_test)
     recall = recall_score(y_test, pred_y, average = None)
+    print('F1 score avg = MICRO: ', f1_score(y_test, pred_y, average='micro', labels=np.unique(pred_y)))
+    print('F1 score avg = NONE: ', f1_score(y_test, pred_y, average=None, labels=np.unique(pred_y)))
     return recall
 
 def main():
@@ -122,6 +142,7 @@ def main():
     recall = onevsrest(ctrn_meta)
    # f.write('Recall: ' + str(recall))
    # f.close()
+     
     print('recall: ' + str(recall))
 #loop over different labels
 main()
