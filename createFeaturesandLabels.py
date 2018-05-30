@@ -113,19 +113,15 @@ def onevsrest(ctrn_meta):
     count_vect = TfidfVectorizer()
     dataX = []
     dataY = []
-   # labels = labelEncoder(ctrn_meta)
-  #  replaceLabelVects(labels, ctrn_meta)
     clusterPresence(ctrn_meta)
     for fileID in ctrn_meta.keys():
         if ctrn_meta[fileID]['valid transcript'] == True:
             dataX.append(ctrn_meta[fileID]['transcript'])
-           # dataY.append(ctrn_meta[fileID]['label_num'])
             dataY.append(ctrn_meta[fileID]['cluster_presence'])
     count_vect.fit(dataX)
     count_vect_X = count_vect.transform(dataX)
     mlb = MultiLabelBinarizer()
     count_vect_Y = mlb.fit_transform(dataY)
-   # count_vect_Y = dataY
     X_train, X_test, y_train, y_test = train_test_split(count_vect_X, count_vect_Y, test_size=0.33, random_state=42)
     ovr = OneVsRestClassifier(LinearSVC(random_state=0))
     ovr.fit(X_train, y_train)
