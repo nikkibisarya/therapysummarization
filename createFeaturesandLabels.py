@@ -51,10 +51,13 @@ def ctrn_metadata():
                     if fileID in corpus:
                         data[fileID] = {}
                         data[fileID]['valid transcript'] = True
+                        if ':' in row[5]:
+                            summary = row[5].split(":")[1]
+                            data[fileID]['summary'] = summary
                         if row[21] != 'NA':
                             symptoms = row[21].split(';')
                         else:
-                            data[fileID]['valid transcript'] = False
+                            data[fileID]['valid transcript'] = False    
                         data[fileID]['symptoms'] = symptoms
                         data[fileID]['cluster_symp'] = [0] * 8
                         data[fileID]['transcript'] = corpus[fileID]
@@ -108,28 +111,107 @@ def labelEncoder(data):
 def replaceLabelVects(labels, data):
     for fileID in data.keys():
         data[fileID]['label_num'] = labels[str(data[fileID]['cluster_symp'])]
-    
+        
+def countPred(pred_y, y_train):
+    classZero = 0
+    classOne = 0
+    classTwo = 0
+    classThree = 0
+    classSix = 0
+    classSeven = 0
+    intVect = []
+    cZero = 0
+    cOne = 0
+    cTwo = 0
+    cThree = 0
+    cSix = 0
+    cSeven = 0
+    iVect = []
+    for vect in pred_y:
+        for char in vect:
+            if char == 1:
+                intVect.append(int(char))
+            if char == 0:
+                intVect.append(int(char))
+        if intVect[0] == 1:
+            classZero += 1
+        if intVect[1] == 1:
+            classOne += 1
+        if intVect[2] == 1:
+            classTwo += 1
+        if intVect[3] == 1:
+            classThree += 1
+        if intVect[4] == 1:
+            classSix += 1
+        if intVect[5] == 1:
+            classSeven += 1
+        del intVect[:]
+    for vect in y_train:
+        for char in vect:
+            if char == 1:
+                iVect.append(int(char))
+            if char == 0:
+                iVect.append(int(char))
+        if iVect[0] == 1:
+            cZero += 1
+        if iVect[1] == 1:
+            cOne += 1
+        if iVect[2] == 1:
+            cTwo += 1
+        if iVect[3] == 1:
+            cThree += 1
+        if iVect[4] == 1:
+            cSix += 1
+        if iVect[5] == 1:
+            cSeven += 1
+        del iVect[:]
+    print('Actual Instances of Cluster 0: ', cZero)
+    print('Actual Instances of Cluster 1: ', cOne)
+    print('Actual Instances of Cluster 2: ', cTwo)
+    print('Actual Instances of Cluster 3: ', cThree)
+    print('Actual Instances of Cluster 6: ', cSix)
+    print('Actual Instances of Cluster 7: ', cSeven)
+    print('Predicted Instances of Cluster 0: ', classZero)
+    print('Predicted Instances of Cluster 1: ', classOne)
+    print('Predicted Instances of Cluster 2: ', classTwo)
+    print('Predicted Instances of Cluster 3: ', classThree)
+    print('Predicted Instances of Cluster 6: ', classSix)
+    print('Predicted Instances of Cluster 7: ', classSeven)
+
+def predictor(count_vect_X, count_vect_Y):
+    X_train, X_test, y_train, y_test = train_test_split(count_vect_X, count_vect_Y, test_size=0.33, random_state=42)
+    print('length: ', len(y_train))
+    print('length: ', len(y_test))
+    ovr = OneVsRestClassifier(LinearSVC(random_state=0))
+    ovr.fit(X_train, y_train)
+    pred_y = ovr.predict(X_test)
+    countPred(pred_y, y_train)
+    print('F1 score avg = MICRO: ', f1_score(y_test, pred_y, average='micro', labels=np.unique(pred_y)))
+    print('F1 score avg = NONE: ', f1_score(y_test, pred_y, average=None, labels=np.unique(pred_y)))
+    recall = recall_score(y_test, pred_y, average = None)
+    print('Recall: ', recall, '\n')
+    return pred_y
+
 def onevsrest(ctrn_meta):
     count_vect = TfidfVectorizer()
     dataX = []
     dataY = []
+    dataZ = []
     clusterPresence(ctrn_meta)
     for fileID in ctrn_meta.keys():
         if ctrn_meta[fileID]['valid transcript'] == True:
             dataX.append(ctrn_meta[fileID]['transcript'])
             dataY.append(ctrn_meta[fileID]['cluster_presence'])
+            dataZ.append(ctrn_meta[fileID]['summary'])
     count_vect.fit(dataX)
     count_vect_X = count_vect.transform(dataX)
     mlb = MultiLabelBinarizer()
     count_vect_Y = mlb.fit_transform(dataY)
-    X_train, X_test, y_train, y_test = train_test_split(count_vect_X, count_vect_Y, test_size=0.33, random_state=42)
-    ovr = OneVsRestClassifier(LinearSVC(random_state=0))
-    ovr.fit(X_train, y_train)
-    pred_y = ovr.predict(X_test)
-    recall = recall_score(y_test, pred_y, average = None)
-    print('F1 score avg = MICRO: ', f1_score(y_test, pred_y, average='micro', labels=np.unique(pred_y)))
-    print('F1 score avg = NONE: ', f1_score(y_test, pred_y, average=None, labels=np.unique(pred_y)))
-    return recall
+    print('Using Transcripts:')
+    predictor(count_vect_X, count_vect_Y)
+    count_vect_Z = count_vect.transform(dataZ)
+    print('Using Summaries:')
+    predictor(count_vect_Z, count_vect_Y)
 
 def main():
    # f = open('recall.txt','w')
@@ -138,8 +220,6 @@ def main():
     recall = onevsrest(ctrn_meta)
    # f.write('Recall: ' + str(recall))
    # f.close()
-     
-    print('recall: ' + str(recall))
 #loop over different labels
 main()
 
