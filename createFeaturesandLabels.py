@@ -34,36 +34,60 @@ def corpus_dic(csvfile):
     return corpus
 
 def ctrn_metadata():
-    csvfile = open('C:/Users/Boltak/Desktop/genpsych/meta.data.4.03.13.csv', 'r', encoding="latin-1")
+    csvfile = open('C:/Users/Boltak/Desktop/Usable Metadata.csv', 'r', encoding="latin-1")
     csvreader = csv.reader(csvfile, delimiter=',')
     data = {}
     i = 0
+    count = 0
+    symcount = 0
+    num = 0
+    no_Summary = 0
+    validCount = 0
+    summaryCount = 0
     corpus = corpus_dic('C:/Users/Boltak/Desktop/genpsych/General_psychtx_corpus_phase1.1.csv')
     for row in csvreader:
         if i != 0:
             if row[4] != '':
                 getID = row[4].split('>')
+                if getID[0] == 'NA':
+                    count += 1
                 if getID[0] != 'NA':
+                    #some fileIDs don't have >
                     if len(getID) == 1:
                         fileID = str(getID[0])
                     else:
                         fileID = str(getID[1])
                     if fileID in corpus:
+                        num += 1
                         data[fileID] = {}
                         data[fileID]['valid transcript'] = True
                         if ':' in row[5]:
                             summary = row[5].split(":")[1]
                             data[fileID]['summary'] = summary
-                        if row[21] != 'NA':
-                            symptoms = row[21].split(';')
+                            summaryCount += 1
                         else:
-                            data[fileID]['valid transcript'] = False    
+                            no_Summary += 1
+                        if row[21] == 'NA':
+                            symcount += 1
+                            data[fileID]['valid transcript'] = False
+                        else:
+                            symptoms = row[21].split(';')
+                        if data[fileID]['valid transcript'] == True:
+                            validCount += 1
                         data[fileID]['symptoms'] = symptoms
                         data[fileID]['cluster_symp'] = [0] * 8
                         data[fileID]['transcript'] = corpus[fileID]
                         data[fileID]['label_num'] = -1
                         data[fileID]['cluster_presence'] = []
         i = i+1
+    print('How many transcripts we have?: ', num)
+    print('How many summaries available?: ', summaryCount)
+    print('How many files dont have a summary? ' , no_Summary)
+    print('Transcripts with no symptoms: ', symcount)
+    print('Transcripts with no file ID: ', count)
+    print('Overall, number of valid transcripts?: ', validCount)
+    
+    
     return data
 
 def symptom2cluster(symptom, class_clusters=class_clusters):
@@ -197,30 +221,34 @@ def onevsrest(ctrn_meta):
     dataX = []
     dataY = []
     dataZ = []
+    count = 0
     clusterPresence(ctrn_meta)
     for fileID in ctrn_meta.keys():
+        print('fileID: ', fileID)
+        print('summary: ', fileID, ctrn_meta[fileID]['summary'])
         if ctrn_meta[fileID]['valid transcript'] == True:
+            count += 1
             dataX.append(ctrn_meta[fileID]['transcript'])
             dataY.append(ctrn_meta[fileID]['cluster_presence'])
-            dataZ.append(ctrn_meta[fileID]['summary'])
+           # dataZ.append(ctrn_meta[fileID]['summary'])
     count_vect.fit(dataX)
     count_vect_X = count_vect.transform(dataX)
     mlb = MultiLabelBinarizer()
     count_vect_Y = mlb.fit_transform(dataY)
+    print('total number of transcripts: ', count)
     print('Using Transcripts:')
     predictor(count_vect_X, count_vect_Y)
-    count_vect_Z = count_vect.transform(dataZ)
+    #count_vect_Z = count_vect.transform(dataZ)
     print('Using Summaries:')
-    predictor(count_vect_Z, count_vect_Y)
+    print('count: ', count)
+   # predictor(count_vect_Z, count_vect_Y)
 
 def main():
    # f = open('recall.txt','w')
     ctrn_meta = ctrn_metadata()
-    clusterVectCreation(ctrn_meta)
-    recall = onevsrest(ctrn_meta)
+    onevsrest(ctrn_meta)
    # f.write('Recall: ' + str(recall))
    # f.close()
-#loop over different labels
 main()
 
 
