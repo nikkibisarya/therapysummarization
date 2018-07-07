@@ -8,6 +8,7 @@ from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.metrics import recall_score
 from sklearn.metrics import f1_score
 import numpy as np
+import unicodedata
 
 textFileName = 'C:/Users/Boltak/Desktop/genpsych/meta.data.4.03.13.csv'
 
@@ -46,6 +47,7 @@ def ctrn_metadata():
     summaryCount = 0
     corpus = corpus_dic('C:/Users/Boltak/Desktop/genpsych/General_psychtx_corpus_phase1.1.csv')
     for row in csvreader:
+  #      row = row.decode('utf-8')
         if i != 0:
             if row[4] != '':
                 getID = row[4].split('>')
@@ -79,6 +81,7 @@ def ctrn_metadata():
                         data[fileID]['transcript'] = corpus[fileID]
                         data[fileID]['label_num'] = -1
                         data[fileID]['cluster_presence'] = []
+                        data[fileID]['weight'] = 1
         i = i+1
     print('How many transcripts we have?: ', num)
     print('How many summaries available?: ', summaryCount)
@@ -216,21 +219,44 @@ def predictor(count_vect_X, count_vect_Y):
     print('Recall: ', recall, '\n')
     return pred_y
 
+def balanceClusters(data):
+    for fileID in data.keys():
+        createDuplicate = True
+        for index in data[fileID]['cluster_presence']:
+            if index == '6':
+                createDuplicate = False
+            else:
+                continue
+        if createDuplicate == True:
+            data[fileID]['weight'] += 1
+            
 def onevsrest(ctrn_meta):
     count_vect = TfidfVectorizer()
     dataX = []
     dataY = []
+    dataYsum = []
     dataZ = []
     count = 0
     clusterPresence(ctrn_meta)
+    balanceClusters(ctrn_meta)
     for fileID in ctrn_meta.keys():
-        print('fileID: ', fileID)
-        print('summary: ', fileID, ctrn_meta[fileID]['summary'])
+    #    print('fileID: ', fileID)
         if ctrn_meta[fileID]['valid transcript'] == True:
-            count += 1
-            dataX.append(ctrn_meta[fileID]['transcript'])
-            dataY.append(ctrn_meta[fileID]['cluster_presence'])
-           # dataZ.append(ctrn_meta[fileID]['summary'])
+            i = 1
+            num = 0
+            for i in range(ctrn_meta[fileID]['weight']):
+                dataX.append(ctrn_meta[fileID]['transcript'])
+                dataY.append(ctrn_meta[fileID]['cluster_presence'])
+                i += 1
+            try: 
+                y = 1
+                for y in range(ctrn_meta[fileID]['weight']):
+                    dataZ.append(ctrn_meta[fileID]['summary'])
+                    dataYsum.append(ctrn_meta[fileID]['cluster_presence'])
+                    y += 1
+            except:
+                print('ctrn_meta[fileID]: ', ctrn_meta[fileID])
+
     count_vect.fit(dataX)
     count_vect_X = count_vect.transform(dataX)
     mlb = MultiLabelBinarizer()
@@ -238,10 +264,11 @@ def onevsrest(ctrn_meta):
     print('total number of transcripts: ', count)
     print('Using Transcripts:')
     predictor(count_vect_X, count_vect_Y)
-    #count_vect_Z = count_vect.transform(dataZ)
+    count_vect_Z = count_vect.transform(dataZ)
+    count_vect_Ysum = mlb.fit_transform(dataYsum)
     print('Using Summaries:')
     print('count: ', count)
-   # predictor(count_vect_Z, count_vect_Y)
+    predictor(count_vect_Z, count_vect_Ysum)
 
 def main():
    # f = open('recall.txt','w')
