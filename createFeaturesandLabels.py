@@ -219,16 +219,56 @@ def predictor(count_vect_X, count_vect_Y):
     print('Recall: ', recall, '\n')
     return pred_y
 
+#too many instances of Cluster 6 so duplicates instances that don't show Cluster 6
 def balanceClusters(data):
     for fileID in data.keys():
         createDuplicate = True
-        for index in data[fileID]['cluster_presence']:
-            if index == '6':
-                createDuplicate = False
-            else:
-                continue
-        if createDuplicate == True:
-            data[fileID]['weight'] += 1
+        if data[fileID]['cluster_presence']:
+            for index in data[fileID]['cluster_presence']:
+                if index == '6':
+                    createDuplicate = False
+                else:
+                    continue
+            if createDuplicate == True:
+                data[fileID]['weight'] += 3
+    for fileID in data.keys():
+        createDuplicate = True
+        if data[fileID]['cluster_presence']:
+            for index in data[fileID]['cluster_presence']:
+                if index == '6':
+                    createDuplicate = False
+                if index == '3':
+                    createDuplicate = False
+                else:
+                    continue
+            if createDuplicate == True:
+                data[fileID]['weight'] += 2
+    for fileID in data.keys():
+        createDuplicate = True
+        if data[fileID]['cluster_presence']:
+            for index in data[fileID]['cluster_presence']:
+                if index == '6':
+                    createDuplicate = False
+                if index == '3':
+                    createDuplicate = False
+                if index == '1':
+                    createDuplicate = False
+                else:
+                    continue
+            if createDuplicate == True:
+                data[fileID]['weight'] += 22
+    for fileID in data.keys():
+        createDuplicate = True
+        if data[fileID]['cluster_presence']:
+            for index in data[fileID]['cluster_presence']:
+                if index == '2':
+                    continue
+                else:
+                    createDuplicate = False
+            if createDuplicate == True:
+                print('found one!')
+                print('here: ', data[fileID]['cluster_presence'])
+                data[fileID]['weight'] += 40
             
 def onevsrest(ctrn_meta):
     count_vect = TfidfVectorizer()
