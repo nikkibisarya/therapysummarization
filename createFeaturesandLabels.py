@@ -77,7 +77,7 @@ def ctrn_metadata():
                         if data[fileID]['valid transcript'] == True:
                             validCount += 1
                         data[fileID]['symptoms'] = symptoms
-                        data[fileID]['cluster_symp'] = [0] * 8
+                        data[fileID]['cluster_symp'] = []
                         data[fileID]['transcript'] = corpus[fileID]
                         data[fileID]['label_num'] = -1
                         data[fileID]['cluster_presence'] = []
@@ -104,6 +104,7 @@ def symptom2cluster(symptom, class_clusters=class_clusters):
     return cluster
 
 def clusterPresence(data):
+    hasSymp = False
     for fileID in data.keys():
         for symp in data[fileID]['symptoms']:
             num = symptom2cluster(symp)
@@ -111,8 +112,12 @@ def clusterPresence(data):
                 if str(num) in data[fileID]['cluster_presence']:
                     continue
                 else:
+                    hasSymp = True
                     data[fileID]['cluster_presence'].append(str(num))
-    
+            if hasSymp == False:
+                data[fileID]['valid transcript'] = False
+                    
+#function not needed   
 def clusterVectCreation(data):
     clusterIndex = -1
     for fileID in data.keys():
@@ -207,6 +212,7 @@ def countPred(pred_y, y_train):
 
 def predictor(count_vect_X, count_vect_Y):
     X_train, X_test, y_train, y_test = train_test_split(count_vect_X, count_vect_Y, test_size=0.33, random_state=42)
+    print('length: ', len(X_train))
     print('length: ', len(y_train))
     print('length: ', len(y_test))
     ovr = OneVsRestClassifier(LinearSVC(random_state=0))
@@ -221,6 +227,11 @@ def predictor(count_vect_X, count_vect_Y):
 
 #too many instances of Cluster 6 so duplicates instances that don't show Cluster 6
 def balanceClusters(data):
+    count = 0
+    for fileID in data.keys():
+        if not data[fileID]['cluster_presence']:
+            count += 1
+    print('count of empty ones: ', count)
     for fileID in data.keys():
         createDuplicate = True
         if data[fileID]['cluster_presence']:
@@ -280,7 +291,6 @@ def onevsrest(ctrn_meta):
     clusterPresence(ctrn_meta)
     balanceClusters(ctrn_meta)
     for fileID in ctrn_meta.keys():
-    #    print('fileID: ', fileID)
         if ctrn_meta[fileID]['valid transcript'] == True:
             i = 1
             num = 0
@@ -298,6 +308,7 @@ def onevsrest(ctrn_meta):
                 print('ctrn_meta[fileID]: ', ctrn_meta[fileID])
 
     count_vect.fit(dataX)
+    print('length dataX: ', len(dataX))
     count_vect_X = count_vect.transform(dataX)
     mlb = MultiLabelBinarizer()
     count_vect_Y = mlb.fit_transform(dataY)
