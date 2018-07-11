@@ -104,8 +104,8 @@ def symptom2cluster(symptom, class_clusters=class_clusters):
     return cluster
 
 def clusterPresence(data):
-    hasSymp = False
     for fileID in data.keys():
+        hasSymp = False
         for symp in data[fileID]['symptoms']:
             num = symptom2cluster(symp)
             if str(num) != '':
@@ -114,8 +114,8 @@ def clusterPresence(data):
                 else:
                     hasSymp = True
                     data[fileID]['cluster_presence'].append(str(num))
-            if hasSymp == False:
-                data[fileID]['valid transcript'] = False
+        if hasSymp == False:
+            data[fileID]['valid transcript'] = False
                     
 #function not needed   
 def clusterVectCreation(data):
