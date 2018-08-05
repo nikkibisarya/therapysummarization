@@ -39,58 +39,45 @@ def ctrn_metadata():
     csvreader = csv.reader(csvfile, delimiter=',')
     data = {}
     i = 0
-    count = 0
     symcount = 0
-    num = 0
-    no_Summary = 0
     validCount = 0
-    summaryCount = 0
+    validSummaryCount = 0
     corpus = corpus_dic('C:/Users/Boltak/Desktop/genpsych/General_psychtx_corpus_phase1.1.csv')
     for row in csvreader:
-  #      row = row.decode('utf-8')
         if i != 0:
+            #GET FILE IDS
             if row[4] != '':
-                getID = row[4].split('>')
-                if getID[0] == 'NA':
-                    count += 1
+                getID = row[4].split('->')
                 if getID[0] != 'NA':
-                    #some fileIDs don't have >
                     if len(getID) == 1:
                         fileID = str(getID[0])
                     else:
                         fileID = str(getID[1])
-                    if fileID in corpus:
-                        num += 1
+                    if row[21] == 'NA':
+                        symcount += 1
+                    if row[21] != 'NA':
+                        symptoms = row[21].split(';')
                         data[fileID] = {}
-                        data[fileID]['valid transcript'] = True
-                        if ':' in row[5]:
-                            summary = row[5].split(":")[1]
-                            data[fileID]['summary'] = summary
-                            summaryCount += 1
-                        else:
-                            no_Summary += 1
-                        if row[21] == 'NA':
-                            symcount += 1
-                            data[fileID]['valid transcript'] = False
-                        else:
-                            symptoms = row[21].split(';')
-                        if data[fileID]['valid transcript'] == True:
-                            validCount += 1
                         data[fileID]['symptoms'] = symptoms
-                        data[fileID]['cluster_symp'] = []
-                        data[fileID]['transcript'] = corpus[fileID]
+                        data[fileID]['valid transcript'] = False
+                        data[fileID]['valid summary'] = False
                         data[fileID]['label_num'] = -1
                         data[fileID]['cluster_presence'] = []
                         data[fileID]['weight'] = 1
+                        data[fileID]['cluster_symp'] = []
+                        if fileID in corpus:
+                            data[fileID]['transcript'] = corpus[fileID]
+                            data[fileID]['valid transcript'] = True
+                            validCount += 1
+                        if ':' in row[5]:
+                            summary = row[5].split(":")[1]
+                            data[fileID]['summary'] = summary
+                            data[fileID]['valid summary'] = True
+                            validSummaryCount += 1
         i = i+1
-    print('How many transcripts we have?: ', num)
-    print('How many summaries available?: ', summaryCount)
-    print('How many files dont have a summary? ' , no_Summary)
-    print('Transcripts with no symptoms: ', symcount)
-    print('Transcripts with no file ID: ', count)
     print('Overall, number of valid transcripts?: ', validCount)
-    
-    
+    print('number of valid summaries: ', validSummaryCount)
+    print('no symptoms: ', symcount)
     return data
 
 def symptom2cluster(symptom, class_clusters=class_clusters):
@@ -104,6 +91,7 @@ def symptom2cluster(symptom, class_clusters=class_clusters):
     return cluster
 
 def clusterPresence(data):
+    count = 0
     for fileID in data.keys():
         hasSymp = False
         for symp in data[fileID]['symptoms']:
@@ -116,8 +104,11 @@ def clusterPresence(data):
                     data[fileID]['cluster_presence'].append(str(num))
         if hasSymp == False:
             data[fileID]['valid transcript'] = False
+            data[fileID]['valid summary'] = False
+            count += 1
+    print('invalid transcripts from cluster presence method: ', count)
                     
-#function not needed   
+#function not used   
 def clusterVectCreation(data):
     clusterIndex = -1
     for fileID in data.keys():
@@ -127,7 +118,8 @@ def clusterVectCreation(data):
                 data[fileID]['valid transcript'] = False
             else:
                 data[fileID]['cluster_symp'][clusterIndex] = 1
-    
+                
+#function not used
 def labelEncoder(data):
     labels = {}
     num = 0
@@ -212,7 +204,7 @@ def countPred(pred_y, y_train):
 
 def predictor(count_vect_X, count_vect_Y):
     X_train, X_test, y_train, y_test = train_test_split(count_vect_X, count_vect_Y, test_size=0.33, random_state=42)
-    print('length: ', len(X_train))
+    print('type: ', type(X_train))
     print('length: ', len(y_train))
     print('length: ', len(y_test))
     ovr = OneVsRestClassifier(LinearSVC(random_state=0))
@@ -231,7 +223,6 @@ def balanceClusters(data):
     for fileID in data.keys():
         if not data[fileID]['cluster_presence']:
             count += 1
-    print('count of empty ones: ', count)
     for fileID in data.keys():
         createDuplicate = True
         if data[fileID]['cluster_presence']:
@@ -277,56 +268,62 @@ def balanceClusters(data):
                 else:
                     createDuplicate = False
             if createDuplicate == True:
-                print('found one!')
-                print('here: ', data[fileID]['cluster_presence'])
                 data[fileID]['weight'] += 40
             
 def onevsrest(ctrn_meta):
+    count = 0
+    countother = 0
+    sumCount = 0
+    sumCountother = 0
+    for fileID in ctrn_meta.keys():
+        if ctrn_meta[fileID]['valid transcript'] == True:
+            count += 1
+        if ctrn_meta[fileID]['valid transcript'] == True:
+            sumCount += 1
+    print('Amount of Valid Transcripts: ', count)
+    print('Amount of Valid Summaries: ', sumCount)
     count_vect = TfidfVectorizer()
     dataX = []
     dataY = []
     dataYsum = []
     dataZ = []
-    count = 0
     clusterPresence(ctrn_meta)
     balanceClusters(ctrn_meta)
     for fileID in ctrn_meta.keys():
         if ctrn_meta[fileID]['valid transcript'] == True:
+            countother += 1
             i = 1
-            num = 0
             for i in range(ctrn_meta[fileID]['weight']):
                 dataX.append(ctrn_meta[fileID]['transcript'])
                 dataY.append(ctrn_meta[fileID]['cluster_presence'])
                 i += 1
-            try: 
-                y = 1
-                for y in range(ctrn_meta[fileID]['weight']):
+        if ctrn_meta[fileID]['valid summary'] == True:
+            try:
+                sumCountother += 1
+                i = 1
+                for i in range(ctrn_meta[fileID]['weight']):
                     dataZ.append(ctrn_meta[fileID]['summary'])
                     dataYsum.append(ctrn_meta[fileID]['cluster_presence'])
-                    y += 1
+                    i += 1
             except:
                 print('ctrn_meta[fileID]: ', ctrn_meta[fileID])
-
+    print('Amount of Valid Transcripts after clust pres: ', countother)
+    print('Amount of Valid summaries after clust pres: ', sumCountother)
     count_vect.fit(dataX)
     print('length dataX: ', len(dataX))
     count_vect_X = count_vect.transform(dataX)
     mlb = MultiLabelBinarizer()
     count_vect_Y = mlb.fit_transform(dataY)
-    print('total number of transcripts: ', count)
     print('Using Transcripts:')
     predictor(count_vect_X, count_vect_Y)
     count_vect_Z = count_vect.transform(dataZ)
     count_vect_Ysum = mlb.fit_transform(dataYsum)
     print('Using Summaries:')
-    print('count: ', count)
     predictor(count_vect_Z, count_vect_Ysum)
 
 def main():
-   # f = open('recall.txt','w')
     ctrn_meta = ctrn_metadata()
     onevsrest(ctrn_meta)
-   # f.write('Recall: ' + str(recall))
-   # f.close()
 main()
 
 
