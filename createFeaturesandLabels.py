@@ -8,9 +8,11 @@ from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.metrics import recall_score
 from sklearn.metrics import f1_score
 import numpy as np
-import unicodedata
+import os
+from ast import literal_eval
 
 textFileName = 'C:/Users/Boltak/Desktop/genpsych/meta.data.4.03.13.csv'
+newTestFiles = 'C:/Users/Boltak/Desktop/Test Files/'
 
 class_clusters = {'6' : ['depression emotion', 'anger', 'mania', 'sadness', 'confusion', 'paranoia', 'panic', 'apathy', 'restlessness', 'despair', 'guilt', 'resentment', 'indecisiveness'], 
                 '3' : ['inattentiveness', 'suicidal ideation', 'fantasizing', 'obsessive behavior', 'isolation', 'racing thoughts', 'withdrawn', 'dreams', 'social inhibition', 'problems concentrating', 'compulsive behavior', 'suicidal behavior', 'severe sensitivity', 'cutting', 'aggression', 'acting out', 'danger to others', 'academic failure', 'detached behavior', 'disorganized thoughts', 'danger to self', 'rash', 'avoidance', 'deceitfulness'],
@@ -19,6 +21,39 @@ class_clusters = {'6' : ['depression emotion', 'anger', 'mania', 'sadness', 'con
                 '7' : ['hallucinations', 'dysphoria', 'hypersomnia', 'hyperphagia', 'enuresis', 'anhedonia', 'dysphagia', 'vomiting'],
                 '1' : ['fatigue', 'chronic pain', 'crying', 'loss of appetite', 'delusions', 'general pain', 'tremors', 'nausea', 'headache', 'back pain', 'withdrawal sickness', 'sweating', 'fainting', 'itching', 'stuttering', 'seizures', 'phantom pain']}
 
+def remove_invalid(s):
+    s = str(s)
+    initial = 0
+    i = 0
+    while i < len(s):
+        c = s[i]
+        if c == '{':
+            initial = i
+            i += 1
+        if c == '}':
+            tmp = s[:initial]
+            if i + 1 < len(s):
+                tmp = tmp + s[i + 1:]
+            s = tmp
+            i = initial
+        else:
+            i += 1
+    return s
+            
+def testingModelTranscripts():
+    newX_test = []
+    for file in os.listdir(newTestFiles):
+        print('file: ', file)
+        with open(''.join([newTestFiles,file]), 'r') as f:
+            lines = f.readlines()
+            for line in lines:
+                cleanLine = remove_invalid(line)
+                line = cleanLine
+            lines = str(lines)
+            newX_test.append(lines)
+            print('finished ', file)
+    return newX_test
+        
 def corpus_dic(csvfile):
     csvfile = open(csvfile, 'rt')
     csvreader = csv.reader(csvfile, delimiter=',')
@@ -202,19 +237,19 @@ def countPred(pred_y, y_train):
     print('Predicted Instances of Cluster 6: ', classSix)
     print('Predicted Instances of Cluster 7: ', classSeven)
 
-def predictor(count_vect_X, count_vect_Y):
+def predictor(count_vect_X, count_vect_Y, strictTestSet_X):
     X_train, X_test, y_train, y_test = train_test_split(count_vect_X, count_vect_Y, test_size=0.33, random_state=42)
-    print('type: ', type(X_train))
-    print('length: ', len(y_train))
-    print('length: ', len(y_test))
     ovr = OneVsRestClassifier(LinearSVC(random_state=0))
     ovr.fit(X_train, y_train)
     pred_y = ovr.predict(X_test)
+    #5 test files
+    pred_newY = ovr.predict(strictTestSet_X)
     countPred(pred_y, y_train)
     print('F1 score avg = MICRO: ', f1_score(y_test, pred_y, average='micro', labels=np.unique(pred_y)))
     print('F1 score avg = NONE: ', f1_score(y_test, pred_y, average=None, labels=np.unique(pred_y)))
     recall = recall_score(y_test, pred_y, average = None)
     print('Recall: ', recall, '\n')
+    print('TESTED TRANSCRIPTS SYMPTOM LABELS: ', pred_newY)
     return pred_y
 
 #too many instances of Cluster 6 so duplicates instances that don't show Cluster 6
@@ -278,7 +313,7 @@ def onevsrest(ctrn_meta):
     for fileID in ctrn_meta.keys():
         if ctrn_meta[fileID]['valid transcript'] == True:
             count += 1
-        if ctrn_meta[fileID]['valid transcript'] == True:
+        if ctrn_meta[fileID]['valid summary'] == True:
             sumCount += 1
     print('Amount of Valid Transcripts: ', count)
     print('Amount of Valid Summaries: ', sumCount)
@@ -311,15 +346,19 @@ def onevsrest(ctrn_meta):
     print('Amount of Valid summaries after clust pres: ', sumCountother)
     count_vect.fit(dataX)
     print('length dataX: ', len(dataX))
+    #using transcripts
     count_vect_X = count_vect.transform(dataX)
     mlb = MultiLabelBinarizer()
     count_vect_Y = mlb.fit_transform(dataY)
+    newX_test = testingModelTranscripts()
+    strictTestSet_X = count_vect.transform(newX_test)
     print('Using Transcripts:')
-    predictor(count_vect_X, count_vect_Y)
+    predictor(count_vect_X, count_vect_Y, strictTestSet_X)
+    #using summaries
     count_vect_Z = count_vect.transform(dataZ)
     count_vect_Ysum = mlb.fit_transform(dataYsum)
     print('Using Summaries:')
-    predictor(count_vect_Z, count_vect_Ysum)
+    predictor(count_vect_Z, count_vect_Ysum, strictTestSet_X)
 
 def main():
     ctrn_meta = ctrn_metadata()
@@ -327,8 +366,8 @@ def main():
 main()
 
 
+
         
-        
-        
+      
         
         
