@@ -1,15 +1,12 @@
-import csv
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.svm import LinearSVC
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
-import re
+import re, os, csv
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.metrics import recall_score
 from sklearn.metrics import f1_score
 import numpy as np
-import os
-from ast import literal_eval
 
 textFileName = 'C:/Users/Boltak/Desktop/genpsych/meta.data.4.03.13.csv'
 newTestFiles = 'C:/Users/Boltak/Desktop/Test Files/'
@@ -21,6 +18,7 @@ class_clusters = {'6' : ['depression emotion', 'anger', 'mania', 'sadness', 'con
                 '7' : ['hallucinations', 'dysphoria', 'hypersomnia', 'hyperphagia', 'enuresis', 'anhedonia', 'dysphagia', 'vomiting'],
                 '1' : ['fatigue', 'chronic pain', 'crying', 'loss of appetite', 'delusions', 'general pain', 'tremors', 'nausea', 'headache', 'back pain', 'withdrawal sickness', 'sweating', 'fainting', 'itching', 'stuttering', 'seizures', 'phantom pain']}
 
+#removes anything within brackets including brackets for a given string
 def remove_invalid(s):
     s = str(s)
     initial = 0
@@ -39,7 +37,8 @@ def remove_invalid(s):
         else:
             i += 1
     return s
-            
+  
+#reads in transcripts from a folder containing pure transcript files        
 def testingModelTranscripts():
     newX_test = []
     for file in os.listdir(newTestFiles):
@@ -53,7 +52,8 @@ def testingModelTranscripts():
             newX_test.append(lines)
             print('finished ', file)
     return newX_test
-        
+
+#pairs each fileID with its transcript    
 def corpus_dic(csvfile):
     csvfile = open(csvfile, 'rt')
     csvreader = csv.reader(csvfile, delimiter=',')
@@ -69,6 +69,7 @@ def corpus_dic(csvfile):
         i = i + 1
     return corpus
 
+#prepares dictionary of key of fileID with underlying multiple underlying keys
 def ctrn_metadata():
     csvfile = open('C:/Users/Boltak/Desktop/Usable Metadata.csv', 'r', encoding="latin-1")
     csvreader = csv.reader(csvfile, delimiter=',')
@@ -115,6 +116,7 @@ def ctrn_metadata():
     print('no symptoms: ', symcount)
     return data
 
+#converts each symptom to its respective cluster number
 def symptom2cluster(symptom, class_clusters=class_clusters):
     cluster = ''
     symptom = symptom.strip().lower()
@@ -125,6 +127,7 @@ def symptom2cluster(symptom, class_clusters=class_clusters):
             break
     return cluster
 
+#determines whether transcript has symptoms that exist in clusters and if not, marks them as invalid
 def clusterPresence(data):
     count = 0
     for fileID in data.keys():
@@ -143,7 +146,8 @@ def clusterPresence(data):
             count += 1
     print('invalid transcripts from cluster presence method: ', count)
                     
-#function not used   
+#function not used, for a vector of 6 numbers (corresponding to clusters)
+#marks presence of cluster w/ '1' in corresponding index
 def clusterVectCreation(data):
     clusterIndex = -1
     for fileID in data.keys():
@@ -154,7 +158,8 @@ def clusterVectCreation(data):
             else:
                 data[fileID]['cluster_symp'][clusterIndex] = 1
                 
-#function not used
+#function not used, for a vector of 6 numbers (corresponding to clusters),
+#increments each cluster according to amount of symptom presence from that cluster
 def labelEncoder(data):
     labels = {}
     num = 0
@@ -167,10 +172,12 @@ def labelEncoder(data):
     print('num: ', num)
     return labels
 
+#function not used
 def replaceLabelVects(labels, data):
     for fileID in data.keys():
         data[fileID]['label_num'] = labels[str(data[fileID]['cluster_symp'])]
-        
+   
+#verify accuracy by counting actual and predicted cluster appearances     
 def countPred(pred_y, y_train):
     classZero = 0
     classOne = 0
@@ -237,6 +244,7 @@ def countPred(pred_y, y_train):
     print('Predicted Instances of Cluster 6: ', classSix)
     print('Predicted Instances of Cluster 7: ', classSeven)
 
+#predicting part of one vs rest, prints results
 def predictor(count_vect_X, count_vect_Y, strictTestSet_X):
     X_train, X_test, y_train, y_test = train_test_split(count_vect_X, count_vect_Y, test_size=0.33, random_state=42)
     ovr = OneVsRestClassifier(LinearSVC(random_state=0))
@@ -304,7 +312,7 @@ def balanceClusters(data):
                     createDuplicate = False
             if createDuplicate == True:
                 data[fileID]['weight'] += 40
-            
+#data organized for algorithm here into features and labels. screens for faulty data. calls one v rest.           
 def onevsrest(ctrn_meta):
     count = 0
     countother = 0
@@ -363,6 +371,7 @@ def onevsrest(ctrn_meta):
 def main():
     ctrn_meta = ctrn_metadata()
     onevsrest(ctrn_meta)
+
 main()
 
 
