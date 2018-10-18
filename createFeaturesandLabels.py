@@ -78,6 +78,7 @@ def ctrn_metadata():
     symcount = 0
     validCount = 0
     validSummaryCount = 0
+    symptomDict = {}
     corpus = corpus_dic('C:/Users/Boltak/Desktop/genpsych/General_psychtx_corpus_phase1.1.csv')
     for row in csvreader:
         if i != 0:
@@ -93,6 +94,11 @@ def ctrn_metadata():
                         symcount += 1
                     if row[21] != 'NA':
                         symptoms = row[21].split(';')
+                        for symptom in symptoms:
+                            if symptom in symptomDict:
+                                symptomDict[symptom] += 1
+                            else:
+                                symptomDict[symptom] = 1
                         data[fileID] = {}
                         data[fileID]['symptoms'] = symptoms
                         data[fileID]['valid transcript'] = False
@@ -111,6 +117,7 @@ def ctrn_metadata():
                             data[fileID]['valid summary'] = True
                             validSummaryCount += 1
         i = i+1
+    print('symptom dict: ', symptomDict)
     print('Overall, number of valid transcripts?: ', validCount)
     print('number of valid summaries: ', validSummaryCount)
     print('no symptoms: ', symcount)
@@ -133,7 +140,7 @@ def clusterPresence(data):
     for fileID in data.keys():
         hasSymp = False
         for symp in data[fileID]['symptoms']:
-            num = symptom2cluster(symp)
+            num = symp
             if str(num) != '':
                 if str(num) in data[fileID]['cluster_presence']:
                     continue
@@ -331,7 +338,7 @@ def onevsrest(ctrn_meta):
     dataYsum = []
     dataZ = []
     clusterPresence(ctrn_meta)
-    balanceClusters(ctrn_meta)
+#    balanceClusters(ctrn_meta)
     for fileID in ctrn_meta.keys():
         if ctrn_meta[fileID]['valid transcript'] == True:
             countother += 1
