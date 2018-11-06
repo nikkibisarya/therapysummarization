@@ -140,7 +140,7 @@ def clusterPresence(data):
     for fileID in data.keys():
         hasSymp = False
         for symp in data[fileID]['symptoms']:
-            num = symp
+            num = symptom2cluster(symp)
             if str(num) != '':
                 if str(num) in data[fileID]['cluster_presence']:
                     continue
