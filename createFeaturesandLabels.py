@@ -8,17 +8,27 @@ from sklearn.metrics import recall_score
 from sklearn.metrics import f1_score
 import numpy as np
 
-textFileName = 'C:/Users/Boltak/Desktop/genpsych/meta.data.4.03.13.csv'
-newTestFiles = 'C:/Users/Boltak/Desktop/Test Files/'
+textFileName = '/home/nikki/text_scanner/Usable Metadata.csv'
+newTestFiles = '/home/nikki//Test Files/'
 
-class_clusters = {'6' : ['depression emotion', 'anger', 'mania', 'sadness', 'confusion', 'paranoia', 'panic', 'apathy', 'restlessness', 'despair', 'guilt', 'resentment', 'indecisiveness'], 
-                '3' : ['inattentiveness', 'suicidal ideation', 'fantasizing', 'obsessive behavior', 'isolation', 'racing thoughts', 'withdrawn', 'dreams', 'social inhibition', 'problems concentrating', 'compulsive behavior', 'suicidal behavior', 'severe sensitivity', 'cutting', 'aggression', 'acting out', 'danger to others', 'academic failure', 'detached behavior', 'disorganized thoughts', 'danger to self', 'rash', 'avoidance', 'deceitfulness'],
-                '2' : ['insomnia'],
-                '0' : ['fearfulness', 'suspiciousness'],
-                '7' : ['hallucinations', 'dysphoria', 'hypersomnia', 'hyperphagia', 'enuresis', 'anhedonia', 'dysphagia', 'vomiting'],
-                '1' : ['fatigue', 'chronic pain', 'crying', 'loss of appetite', 'delusions', 'general pain', 'tremors', 'nausea', 'headache', 'back pain', 'withdrawal sickness', 'sweating', 'fainting', 'itching', 'stuttering', 'seizures', 'phantom pain']}
+class_clusters = {
+    '6': ['depression emotion', 'anger', 'mania', 'sadness', 'confusion', 'paranoia', 'panic', 'apathy', 'restlessness',
+          'despair', 'guilt', 'resentment', 'indecisiveness'],
+    '3': ['inattentiveness', 'suicidal ideation', 'fantasizing', 'obsessive behavior', 'isolation', 'racing thoughts',
+          'withdrawn', 'dreams', 'social inhibition', 'problems concentrating', 'compulsive behavior',
+          'suicidal behavior', 'severe sensitivity', 'cutting', 'aggression', 'acting out', 'danger to others',
+          'academic failure', 'detached behavior', 'disorganized thoughts', 'danger to self', 'rash', 'avoidance',
+          'deceitfulness'],
+    '2': ['insomnia'],
+    '0': ['fearfulness', 'suspiciousness'],
+    '7': ['hallucinations', 'dysphoria', 'hypersomnia', 'hyperphagia', 'enuresis', 'anhedonia', 'dysphagia',
+          'vomiting'],
+    '1': ['fatigue', 'chronic pain', 'crying', 'loss of appetite', 'delusions', 'general pain', 'tremors', 'nausea',
+          'headache', 'back pain', 'withdrawal sickness', 'sweating', 'fainting', 'itching', 'stuttering', 'seizures',
+          'phantom pain']}
 
-#removes anything within brackets including brackets for a given string
+
+# removes anything within brackets including brackets for a given string
 def remove_invalid(s):
     s = str(s)
     initial = 0
@@ -37,13 +47,14 @@ def remove_invalid(s):
         else:
             i += 1
     return s
-  
-#reads in transcripts from a folder containing pure transcript files        
+
+
+# reads in transcripts from a folder containing pure transcript files
 def testingModelTranscripts():
     newX_test = []
     for file in os.listdir(newTestFiles):
         print('file: ', file)
-        with open(''.join([newTestFiles,file]), 'r') as f:
+        with open(''.join([newTestFiles, file]), 'r') as f:
             lines = f.readlines()
             for line in lines:
                 cleanLine = remove_invalid(line)
@@ -53,7 +64,7 @@ def testingModelTranscripts():
             print('finished ', file)
     return newX_test
 
-#pairs each fileID with its transcript    
+# pairs each fileID with its transcript
 def corpus_dic(csvfile):
     csvfile = open(csvfile, 'rt')
     csvreader = csv.reader(csvfile, delimiter=',')
@@ -69,9 +80,10 @@ def corpus_dic(csvfile):
         i = i + 1
     return corpus
 
-#prepares dictionary of key of fileID with underlying multiple underlying keys
+
+# prepares dictionary of key of fileID with underlying multiple underlying keys
 def ctrn_metadata():
-    csvfile = open('C:/Users/Boltak/Desktop/Usable Metadata.csv', 'r', encoding="latin-1")
+    csvfile = open(textFileName, 'r', encoding="latin-1")
     csvreader = csv.reader(csvfile, delimiter=',')
     data = {}
     i = 0
@@ -79,10 +91,10 @@ def ctrn_metadata():
     validCount = 0
     validSummaryCount = 0
     symptomDict = {}
-    corpus = corpus_dic('C:/Users/Boltak/Desktop/genpsych/General_psychtx_corpus_phase1.1.csv')
+    corpus = corpus_dic('/home/nikki/text_scanner/General_psychtx_corpus_phase1.1.csv')
     for row in csvreader:
         if i != 0:
-            #GET FILE IDS
+            # GET FILE IDS
             if row[4] != '':
                 getID = row[4].split('->')
                 if getID[0] != 'NA':
@@ -116,25 +128,27 @@ def ctrn_metadata():
                             data[fileID]['summary'] = summary
                             data[fileID]['valid summary'] = True
                             validSummaryCount += 1
-        i = i+1
+        i = i + 1
     print('symptom dict: ', symptomDict)
     print('Overall, number of valid transcripts?: ', validCount)
     print('number of valid summaries: ', validSummaryCount)
     print('no symptoms: ', symcount)
     return data
 
-#converts each symptom to its respective cluster number
+
+# converts each symptom to its respective cluster number
 def symptom2cluster(symptom, class_clusters=class_clusters):
     cluster = ''
     symptom = symptom.strip().lower()
-    symptom = re.sub(r'[^\w\s]','',symptom)
+    symptom = re.sub(r'[^\w\s]', '', symptom)
     for key in class_clusters.keys():
         if symptom in class_clusters[key]:
             cluster = int(key)
             break
     return cluster
 
-#determines whether transcript has symptoms that exist in clusters and if not, marks them as invalid
+
+# determines whether transcript has symptoms that exist in clusters and if not, marks them as invalid
 def clusterPresence(data):
     count = 0
     for fileID in data.keys():
@@ -152,9 +166,10 @@ def clusterPresence(data):
             data[fileID]['valid summary'] = False
             count += 1
     print('invalid transcripts from cluster presence method: ', count)
-                    
-#function not used, for a vector of 6 numbers (corresponding to clusters)
-#marks presence of cluster w/ '1' in corresponding index
+
+
+# function not used, for a vector of 6 numbers (corresponding to clusters)
+# marks presence of cluster w/ '1' in corresponding index
 def clusterVectCreation(data):
     clusterIndex = -1
     for fileID in data.keys():
@@ -164,9 +179,10 @@ def clusterVectCreation(data):
                 data[fileID]['valid transcript'] = False
             else:
                 data[fileID]['cluster_symp'][clusterIndex] = 1
-                
-#function not used, for a vector of 6 numbers (corresponding to clusters),
-#increments each cluster according to amount of symptom presence from that cluster
+
+
+# function not used, for a vector of 6 numbers (corresponding to clusters),
+# increments each cluster according to amount of symptom presence from that cluster
 def labelEncoder(data):
     labels = {}
     num = 0
@@ -179,12 +195,14 @@ def labelEncoder(data):
     print('num: ', num)
     return labels
 
-#function not used
+
+# function not used
 def replaceLabelVects(labels, data):
     for fileID in data.keys():
         data[fileID]['label_num'] = labels[str(data[fileID]['cluster_symp'])]
-   
-#verify accuracy by counting actual and predicted cluster appearances     
+
+
+# verify accuracy by counting actual and predicted cluster appearances
 def countPred(pred_y, y_train):
     classZero = 0
     classOne = 0
@@ -251,23 +269,25 @@ def countPred(pred_y, y_train):
     print('Predicted Instances of Cluster 6: ', classSix)
     print('Predicted Instances of Cluster 7: ', classSeven)
 
-#predicting part of one vs rest, prints results
+
+# predicting part of one vs rest, prints results
 def predictor(count_vect_X, count_vect_Y, strictTestSet_X):
     X_train, X_test, y_train, y_test = train_test_split(count_vect_X, count_vect_Y, test_size=0.33, random_state=42)
     ovr = OneVsRestClassifier(LinearSVC(random_state=0))
     ovr.fit(X_train, y_train)
     pred_y = ovr.predict(X_test)
-    #5 test files
+    # 5 test files
     pred_newY = ovr.predict(strictTestSet_X)
     countPred(pred_y, y_train)
     print('F1 score avg = MICRO: ', f1_score(y_test, pred_y, average='micro', labels=np.unique(pred_y)))
     print('F1 score avg = NONE: ', f1_score(y_test, pred_y, average=None, labels=np.unique(pred_y)))
-    recall = recall_score(y_test, pred_y, average = None)
+    recall = recall_score(y_test, pred_y, average=None)
     print('Recall: ', recall, '\n')
     print('TESTED TRANSCRIPTS SYMPTOM LABELS: ', pred_newY)
     return pred_y
 
-#too many instances of Cluster 6 so duplicates instances that don't show Cluster 6
+
+# too many instances of Cluster 6 so duplicates instances that don't show Cluster 6
 def balanceClusters(data):
     count = 0
     for fileID in data.keys():
@@ -319,7 +339,9 @@ def balanceClusters(data):
                     createDuplicate = False
             if createDuplicate == True:
                 data[fileID]['weight'] += 40
-#data organized for algorithm here into features and labels. screens for faulty data. calls one v rest.           
+
+
+# data organized for algorithm here into features and labels. screens for faulty data. calls one v rest.
 def onevsrest(ctrn_meta):
     count = 0
     countother = 0
@@ -338,7 +360,7 @@ def onevsrest(ctrn_meta):
     dataYsum = []
     dataZ = []
     clusterPresence(ctrn_meta)
-#    balanceClusters(ctrn_meta)
+    #    balanceClusters(ctrn_meta)
     for fileID in ctrn_meta.keys():
         if ctrn_meta[fileID]['valid transcript'] == True:
             countother += 1
@@ -361,7 +383,7 @@ def onevsrest(ctrn_meta):
     print('Amount of Valid summaries after clust pres: ', sumCountother)
     count_vect.fit(dataX)
     print('length dataX: ', len(dataX))
-    #using transcripts
+    # using transcripts
     count_vect_X = count_vect.transform(dataX)
     mlb = MultiLabelBinarizer()
     count_vect_Y = mlb.fit_transform(dataY)
@@ -369,21 +391,16 @@ def onevsrest(ctrn_meta):
     strictTestSet_X = count_vect.transform(newX_test)
     print('Using Transcripts:')
     predictor(count_vect_X, count_vect_Y, strictTestSet_X)
-    #using summaries
+    # using summaries
     count_vect_Z = count_vect.transform(dataZ)
     count_vect_Ysum = mlb.fit_transform(dataYsum)
     print('Using Summaries:')
     predictor(count_vect_Z, count_vect_Ysum, strictTestSet_X)
 
+
 def main():
     ctrn_meta = ctrn_metadata()
     onevsrest(ctrn_meta)
 
+
 main()
-
-
-
-        
-      
-        
-        
